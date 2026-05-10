@@ -1,0 +1,38 @@
+# ratings_history.yaml
+# Append-only. Every rating change is logged here.
+# This is how you see if VENOM is actually getting better.
+
+history:
+  - date: "2026-05-09"
+    event: "V2 Self-Audit baseline established"
+    overall: 57
+    layers:
+      L0_shell: 94
+      L1_mantle: 98
+      L2_hearts: 60
+      L3_ink: 35
+      L4_arms: 30
+      L5_skin: 70
+      L6_defense: 85
+      L7_burst: 40
+      L8_siphon: 12
+      L9_coconut: 65
+      L10_reciprocity: 18
+      L11_personality: 78
+      L12_proprioception: 0
+      L13_metabolic: 0
+      L14_temporal: 0
+
+# Next entry goes below this line when a rating changes.
+# Format:
+#
+# - date: "YYYY-MM-DD"
+#   session: "session-NNN"
+#   layer: L8_siphon
+#   before: 12
+#   after: 25
+#   delta: +13
+#   what_changed: "MEMORY.md schema designed. 7 field types defined."
+#   still_missing: ["extraction prototype", "automation", "VENOCTIS hook"]
+#   overall_before: 57
+#   overall_after: 58

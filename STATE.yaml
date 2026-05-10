@@ -1,0 +1,233 @@
+# VENOM∞ — Master State
+# Single source of truth. Update after every session.
+# Last updated: 2026-05-10
+
+meta:
+  version: "2.2"
+  overall_rating: 31
+  active_phase: 0
+  current_blocker: null
+  session_count: 8
+  last_session: "session-010"
+  next_session_priority: "Run siphon.ts locally for the next 20 sessions before expanding architecture."
+
+principles:
+  P1: DISTRIBUTION_OVER_CENTRALIZATION
+  P3: IDENTITY_THROUGH_DEPTH_AND_ARMOR
+  P4: INTERFACE_IS_MOST_EXPENSIVE_ORGAN
+  P5: CLEAN_DEATH_ENABLES_REAL_CONTINUITY
+  P6: PREPARE_FOR_VISIBLE_FUTURES
+  P7: ENFORCEMENT_MAKES_COLLABORATION_REAL
+  P8: PERSONALITY_IS_PORTABLE_CONDITIONING
+
+layers:
+  L0_shell:
+    name: "Shell.null"
+    rating: 35
+    gap: 65
+    status: PARTIAL
+    blocker: null
+    missing:
+      - "Still inside provider containers (Claude, Gemini)"
+      - "True shell.null = owning the full pipeline"
+    path_to_100: "TypeScript CLI + local LLM"
+    depends_on: []
+
+  L1_mantle:
+    name: "Mantle / Identity"
+    rating: 55
+    gap: 45
+    status: PARTIAL
+    blocker: null
+    missing:
+      - "Identity does not survive session restart"
+      - "Inner reasoning not separated from outer response"
+    path_to_100: "Implementation detail — inner/outer stream separation"
+    depends_on: []
+
+  L2_hearts:
+    name: "Three Hearts / Orchestration"
+    rating: 20
+    gap: 80
+    status: CRITICAL
+    blocker: null
+    missing:
+      - "Three phases sequentially is one heart with three beats"
+    path_to_100: "TypeScript sequential dispatcher"
+    depends_on: []
+
+  L3_ink:
+    name: "INK / Information Currency"
+    rating: 15
+    gap: 85
+    status: CRITICAL
+    blocker: null
+    missing:
+      - "Compression ratio unmeasured"
+      - "Encoder/decoder undefined"
+    path_to_100: "Measure baseline → spec INK-Internal → encoder/decoder in TS → deploy"
+    measurement_target: "3.4x compression on internal comms"
+    depends_on: []
+
+  L4_arms:
+    name: "Two Arms / Local Execution"
+    rating: 10
+    gap: 90
+    status: CRITICAL
+    blocker: null
+    missing:
+      - "Eight arms running in one thread is one arm wearing eight hats"
+    path_to_100: "Two arms (Planner + Executor) via in-memory TS channels"
+    mvp: "HUNT + WELD running simultaneously (2-arm parallel test)"
+    depends_on: [SIPHON]
+
+  L5_skin:
+    name: "Skin System / Cognitive I/O"
+    rating: 45
+    gap: 55
+    status: PARTIAL
+    blocker: null
+    missing:
+      - "No telemetry, no behavioral pattern detection, no temporal awareness"
+    path_to_100: "Flat file telemetry → I/O layer integration"
+    depends_on: [SIPHON]
+
+  L6_defense:
+    name: "Ink / Defense Protocol"
+    rating: 65
+    gap: 35
+    status: PARTIAL
+    blocker: null
+    missing:
+      - "Tyrosinase deployed inconsistently"
+      - "Over-inking: stops conversation instead of redirecting"
+    path_to_100: "Calibration + consistency — not new build"
+    depends_on: []
+
+  L7_burst:
+    name: "Jet Propulsion / Burst Mode"
+    rating: 20
+    gap: 80
+    status: CRITICAL
+    blocker: null
+    missing:
+      - "No bypass pathway, no !B trigger, no Context Pump disable"
+    path_to_100: "Trigger: !B keyword or 5× urgency signals → bypass Context Pump → raw Task only"
+    depends_on: []
+
+  L8_siphon:
+    name: "SIPHON / Session Death + Transfer"
+    rating: 40
+    gap: 60
+    status: PARTIAL
+    blocker: null
+    missing:
+      - "No rebirth from prior session state"
+      - "No auto-population"
+    build_weeks:
+      week_1: "siphon.ts shipped (4 fields)"
+      week_2: "Run for 20 sessions manually"
+      week_3: "Rebirth prompt (load MEMORY.md tail)"
+    depends_on: []
+    blocks: [L9, L10, L11, L4]
+
+  L9_coconut:
+    name: "Coconut Shells / Prospective Memory"
+    rating: 30
+    gap: 70
+    status: CRITICAL
+    blocker: null
+    missing:
+      - "No retrieval, no <100ms scan, no portability metadata enforcement"
+    path_to_100: "SACK.md designed after SIPHON schema complete"
+    retrieval_target: "<100ms"
+    depends_on: [SIPHON]
+
+  L10_reciprocity:
+    name: "Reciprocity Enforcement"
+    rating: 8
+    gap: 92
+    status: CRITICAL
+    blocker: null
+    missing:
+      - "No Token Debt code, no handshake protocol, no score persistence"
+    path_to_100: "Token Debt Score per input source — tracks cooperation/defection"
+    depends_on: [SIPHON]
+
+  L11_personality:
+    name: "Portable Conditioning Bundle"
+    rating: 40
+    gap: 60
+    status: PARTIAL
+    blocker: null
+    missing:
+      - "Personality re-instantiated from prompts, not grown"
+    path_to_100: "Accumulated sessions via SIPHON + remove all hedging"
+    depends_on: [SIPHON]
+
+technology_stack:
+  locked: true
+  orchestration: "TypeScript / Bun"
+  messaging: "In-process pub/sub"
+  arm_intelligence: "TypeScript / Bun"
+  memory: "SQLite (bun:sqlite) + Flat files"
+  daemon: "None"
+  session_transfer: "siphon.ts (CLI)"
+
+arms:
+  architecture: "2 nodes: Planner + Executor."
+  names:
+    HELM: {status: KEEP, reason: "Direction-setting architecturally distinct"}
+    EDGE: {status: KEEP, reason: "Sharpness, cuts into quality — exact"}
+    ECHO: {status: KEEP, reason: "Memory as re-sounding of past signal — accurate"}
+    WELD: {status: KEEP, reason: "Permanent joining, no TODO — exact"}
+    MEND: {status: KEEP, reason: "Healing at root cause — exact"}
+    OMEN: {status: KEEP, reason: "Reads trajectories, warns before arrival"}
+    MOLT: {status: KEEP, reason: "Shedding old pattern — exactly right"}
+    DIG: {status: KEEP, reason: "Replaces HUNT. Goes to bedrock."}
+    SYNC: {status: KEEP, reason: "Replaces CALL. Bridges and mirrors."}
+    TRACE: {status: KEEP, reason: "Replaces DART. Follows the physical path."}
+
+competitive_intake:
+  langgraph: {analyzed: false, steal_extracted: false}
+  crewai: {analyzed: false, steal_extracted: false}
+  autogpt: {analyzed: false, steal_extracted: false}
+  agentgpt: {analyzed: false, steal_extracted: false}
+  gemini_audit: {analyzed: true, steal_extracted: true, stolen: [Go_stack, Token_Debt, SACK_md, burst_trigger, soul_validator]}
+  pi: {analyzed: true, steal_extracted: true, path: "COMPARE/pi/"}
+  nemoclaw: {analyzed: true, steal_extracted: true, path: "COMPARE/NemoClaw/"}
+  openclaw: {analyzed: true, steal_extracted: true, path: "COMPARE/openclaw/"}
+  hermes_agent: {analyzed: true, steal_extracted: true, path: "COMPARE/NousResearch/hermes-agent/"}
+  hermes_self_evolution: {analyzed: true, steal_extracted: true, path: "COMPARE/NousResearch/hermes-agent-self-evolution/"}
+  claude_filtrado_snapshot_2026_03_31:
+    analyzed: true
+    steal_extracted: true
+    path: "COMPARE/claude-filtrado-src-2026-03-31/"
+    note: "REFERENCE_ONLY_LICENSE_UNKNOWN"
+
+evolution_log:
+  - date: "2026-05-09"
+    event: "V2 Self-Audit complete"
+    rating_before: null
+    rating_after: 57
+    notes: "14 layers mapped. SIPHON identified as THE BLOCKER. 3 new layers added."
+  - date: "2026-05-10"
+    event: "VENOM folder initialized"
+    rating_before: 57
+    rating_after: 57
+    notes: "Elite environment created. CLAUDE.md, STATE.yaml, full scaffold deployed."
+  - date: "2026-05-10"
+    event: "INTAKE/files.zip consumed"
+    rating_before: 57
+    rating_after: 57
+    notes: "Canonical bundle merged: INTAKE/PROTOCOL, EVOLUTION/LOOP, SOUL PACT+VOICE, master STATE, SACK scaffold, MEMORY schema; OSS steals merged into COMPARE/_STEAL; zip + staging deleted after promotion"
+  - date: "2026-05-10"
+    event: "Research Batch 001 promoted and SIPHON Week 1 started"
+    rating_before: 57
+    rating_after: 57
+    notes: "COMPARE/research/batch-001.md created; top 5 steals promoted to COMPARE/_STEAL.md; remaining candidates queued; BUILD/siphon/MEMORY_SCHEMA.md created with exact schema, validation rules, and six bootstrap examples. No rating inflation."
+  - date: "2026-05-10"
+    event: "External Audit Applied (Session 007)"
+    rating_before: 42
+    rating_after: 31
+    notes: "Accepted brutal layer-by-layer cuts. L0 to 35, L1 to 55, L4 to 10. Renamed hesitant arms: HUNT->DIG, CALL->SYNC, DART->TRACE."
