@@ -14,46 +14,79 @@ Protocol:
 
 from __future__ import annotations
 
+import json
+import logging
+import random
 import re
+import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
 import httpx
 import yaml
+from pydantic import ValidationError
 
+from .schema import ExtractionResult, ExtractionSeverity
 
-# ── Extraction Schema (v1 — 7 fields) ───────────────────────────────────
+LOG = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """\
-You are SIPHON. Extract the session transcript into exactly this YAML.
-Output ONLY raw YAML. No markdown fences. No commentary.
+# ── LLM prompts ───────────────────────────────────────────────────────────
+
+JSON_SYSTEM_PROMPT = """\
+You are SIPHON. Summarize the session transcript into ONE JSON object only.
+Output ONLY raw JSON. No markdown fences. No commentary.
+
+Schema:
+{
+  "session_id": "session-NNN or inferred id",
+  "extracted_at": "<ISO-8601 datetime string>",
+  "entries": [
+    {
+      "timestamp": "<ISO-8601 string>",
+      "summary": "one-line summary",
+      "decision": "",
+      "correction": "",
+      "pattern": "",
+      "memory_worthy": false,
+      "severity": "info"
+    }
+  ],
+  "total_tokens": 0,
+  "model_used": ""
+}
+
+Rules:
+- Produce at least one entry when transcript has usable content.
+- severity must be one of: critical, major, minor, info
+- Fill correction only when something wrong was fixed; decision when an explicit choice was made.
+- pattern: observable repetition / technique / path-worthy hook when relevant.
+- memory_worthy true only for durable facts worth MEMORY.md.
+- Omit unknown scalar fields as \"\" , false , or 0 as appropriate.
+
+If transcript is empty of substance, return one entry with summary noting emptiness and severity info.
+"""
+
+LEGACY_YAML_PROMPT = """\
+Fallback legacy YAML shape (only if JSON is impossible — prefer JSON):
+Output ONLY raw YAML. No markdown fences.
 
 session:
   id: "session-NNN"
   date: YYYY-MM-DD
-  decisions:
-    - "what changed"
-  corrections:
-    - "what was wrong and got fixed"
-  next_action: "first thing to do next session"
-  current_truth: "one sentence the next session inherits"
-  blocks:
-    - "things that blocked progress and are NOT fixed yet"
-  artifacts:
-    - "files, patterns, skills, or outputs created this session"
-  energy_state: building
+  decisions: []
+  corrections: []
+  next_action: ""
+  current_truth: ""
+  blocks: []
+  artifacts: []
+  energy_state: idle
 
-Rules:
-- decisions: only explicit choices, not observations
-- corrections: only things that were WRONG and got FIXED
-- next_action: concrete, not philosophical
-- current_truth: the single most important fact right now
-- blocks: active impediments still open — empty [] if none
-- artifacts: tangible outputs (paths, skill names, docs) — empty [] if none
-- energy_state: exactly one of: building, debugging, researching, idle, blocked
-- If a list field has nothing, use []. If a string field has nothing, use ""
+energy_state ∈ building | debugging | researching | idle | blocked
 """
+
+COMBINED_SYSTEM_PROMPT = JSON_SYSTEM_PROMPT + "\n\n" + LEGACY_YAML_PROMPT
 
 
 ENERGY_STATES = frozenset({"building", "debugging", "researching", "idle", "blocked"})
@@ -114,49 +147,225 @@ class Extraction:
         )
 
 
-# ── Extractor ────────────────────────────────────────────────────────────
+def extraction_result_to_extraction(result: ExtractionResult) -> Extraction:
+    """Fold validated ExtractionResult into MEMORY-compatible Extraction."""
+    entries = result.entries
+    decisions: list[str] = []
+    seen: set[str] = set()
+    for e in entries:
+        if e.decision.strip():
+            d = e.decision.strip()
+            if d not in seen:
+                seen.add(d)
+                decisions.append(d)
+    for e in entries:
+        if e.memory_worthy and e.summary.strip():
+            s = e.summary.strip()
+            if s not in seen:
+                seen.add(s)
+                decisions.append(s)
+
+    corrections = []
+    for e in entries:
+        if e.correction.strip():
+            corrections.append(e.correction.strip())
+
+    blocks: list[str] = []
+    artifacts: list[str] = []
+    for e in entries:
+        p = e.pattern.strip()
+        if not p:
+            continue
+        if e.severity in (ExtractionSeverity.critical, ExtractionSeverity.major):
+            blocks.append(p)
+        else:
+            artifacts.append(p)
+
+    rank = {
+        ExtractionSeverity.info: 0,
+        ExtractionSeverity.minor: 1,
+        ExtractionSeverity.major: 2,
+        ExtractionSeverity.critical: 3,
+    }
+    worst = ExtractionSeverity.info
+    for e in entries:
+        if rank[e.severity] > rank[worst]:
+            worst = e.severity
+    energy_map = {
+        ExtractionSeverity.critical: "blocked",
+        ExtractionSeverity.major: "debugging",
+        ExtractionSeverity.minor: "building",
+        ExtractionSeverity.info: "idle",
+    }
+    energy_state = energy_map[worst]
+
+    date_str = (
+        result.extracted_at.date().isoformat()
+        if isinstance(result.extracted_at, datetime)
+        else date.today().isoformat()
+    )
+    truth = entries[0].summary.strip() if entries else ""
+    next_act = ""
+    for e in reversed(entries):
+        if e.memory_worthy and e.summary.strip():
+            next_act = e.summary.strip()
+            break
+
+    return Extraction(
+        session_id=result.session_id.strip() or "session-unknown",
+        date=date_str,
+        decisions=decisions,
+        corrections=corrections,
+        next_action=next_act,
+        current_truth=truth,
+        blocks=blocks,
+        artifacts=artifacts,
+        energy_state=energy_state,
+    )
+
+
+def append_siphon_error(memory_dir: Path, record: dict[str, Any]) -> Path:
+    """Append one JSON line to `.siphon_errors.jsonl`."""
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    path = memory_dir / ".siphon_errors.jsonl"
+    line = json.dumps(record, default=str, ensure_ascii=False)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+    return path
+
+
+def _strip_markdown_fences(content: str) -> str:
+    content = content.strip()
+    content = re.sub(r"^```(?:json|yaml)?\s*\n?", "", content)
+    content = re.sub(r"\n?```\s*$", "", content)
+    return content.strip()
+
+
+def _parse_llm_content_to_extraction(
+    content: str,
+    *,
+    config,
+    usage_tokens: int,
+    raw_snippet_max: int = 1200,
+) -> Extraction:
+    stripped = _strip_markdown_fences(content)
+
+    # 1) JSON + Pydantic (preferred)
+    try:
+        data = json.loads(stripped)
+        if isinstance(data, dict):
+            result = ExtractionResult.model_validate(data)
+            updates: dict[str, Any] = {}
+            if not result.total_tokens and usage_tokens:
+                updates["total_tokens"] = usage_tokens
+            if not result.model_used:
+                updates["model_used"] = config.model
+            if updates:
+                result = result.model_copy(update=updates)
+            return extraction_result_to_extraction(result)
+    except json.JSONDecodeError:
+        pass
+    except ValidationError as e:
+        append_siphon_error(
+            config.memory_dir,
+            {
+                "kind": "validation_error",
+                "errors": e.errors(),
+                "snippet": stripped[:raw_snippet_max],
+            },
+        )
+        LOG.warning("SIPHON JSON validation failed: %s", e)
+
+    # 2) Legacy YAML session block
+    try:
+        yml = yaml.safe_load(stripped)
+        if isinstance(yml, dict) and "session" in yml:
+            append_siphon_error(
+                config.memory_dir,
+                {"kind": "legacy_yaml_fallback", "snippet": stripped[:raw_snippet_max]},
+            )
+            return Extraction.from_dict(yml)
+    except yaml.YAMLError:
+        pass
+
+    append_siphon_error(
+        config.memory_dir,
+        {"kind": "unparseable_response", "snippet": stripped[:raw_snippet_max]},
+    )
+    raise ValueError(f"Invalid extraction payload (not JSON schema nor legacy session YAML): {stripped[:200]}")
+
+
+def _request_extraction_raw(transcript: str, config) -> tuple[str, int]:
+    """POST with retries; returns (message_content, total_tokens)."""
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            response = httpx.post(
+                config.api_url,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {config.api_key}",
+                },
+                json={
+                    "model": config.model,
+                    "messages": [
+                        {"role": "system", "content": COMBINED_SYSTEM_PROMPT},
+                        {"role": "user", "content": transcript},
+                    ],
+                    "temperature": config.temperature,
+                },
+                timeout=30.0,
+            )
+            if response.status_code in (429, 502, 503, 504):
+                raise httpx.HTTPStatusError(
+                    "retryable status",
+                    request=response.request,
+                    response=response,
+                )
+            response.raise_for_status()
+            raw = response.json()
+            if (
+                not isinstance(raw.get("choices"), list)
+                or not raw["choices"]
+                or not isinstance(raw["choices"][0], dict)
+                or "message" not in raw["choices"][0]
+            ):
+                raise KeyError("choices/message")
+            content = raw["choices"][0]["message"]["content"]
+            usage = raw.get("usage") or {}
+            tokens = int(usage.get("total_tokens") or 0)
+            return str(content), tokens
+        except (httpx.TimeoutException, httpx.TransportError, httpx.HTTPStatusError, KeyError) as e:
+            last_error = e
+            append_siphon_error(
+                config.memory_dir,
+                {"kind": "http_attempt_failed", "attempt": attempt + 1, "error": repr(e)},
+            )
+            if attempt == 2:
+                break
+            backoff = (2**attempt) * random.uniform(0.8, 1.2)
+            time.sleep(backoff)
+
+    raise ValueError(f"SIPHON HTTP extraction failed after retries: {last_error}") from last_error
+
 
 def extract(transcript: str, config) -> Extraction:
     """
-    Send transcript to LLM, parse extraction YAML.
-    Raises ValueError on parse failure.
+    Send transcript to LLM, validate JSON via Pydantic when possible,
+    fall back to legacy YAML session blocks, return MEMORY-compatible Extraction.
     """
     if not config.has_api_key:
         raise ValueError("ZAI_API_KEY not set. Cannot extract.")
 
-    response = httpx.post(
-        config.api_url,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {config.api_key}",
-        },
-        json={
-            "model": config.model,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": transcript},
-            ],
-            "temperature": config.temperature,
-        },
-        timeout=60.0,
+    raw_content, usage_tokens = _request_extraction_raw(transcript, config)
+    return _parse_llm_content_to_extraction(
+        raw_content,
+        config=config,
+        usage_tokens=usage_tokens,
     )
-    response.raise_for_status()
-
-    raw = response.json()
-    content = raw["choices"][0]["message"]["content"]
-
-    # Strip markdown fences if model ignores instruction
-    content = re.sub(r"^```(?:yaml)?\n?", "", content.strip())
-    content = re.sub(r"\n?```\s*$", "", content)
-
-    data = yaml.safe_load(content)
-    if not isinstance(data, dict) or "session" not in data:
-        raise ValueError(f"Invalid extraction format: {content[:200]}")
-
-    return Extraction.from_dict(data)
 
 
-# ── Memory I/O ───────────────────────────────────────────────────────────
+# ── Memory I/O ─────────────────────────────────────────────────────────────
 
 SEPARATOR = "\n---\n"
 

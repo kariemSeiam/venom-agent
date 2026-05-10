@@ -14,11 +14,13 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers.polling import PollingObserver
 
 from ..core.config import SiphonConfig, VenomConfig
-from .extractor import append_corrections, append_extraction, extract
+from .backoff import BackoffController
+from .extractor import append_corrections, append_extraction, append_siphon_error, extract
 
 LOG = logging.getLogger(__name__)
 
 INDEX_PROCESSED_KEY = "processed"
+_PATH_BACKOFF: dict[str, BackoffController] = {}
 
 
 def ensure_memory_and_watch_dirs(config: SiphonConfig) -> None:
@@ -100,6 +102,12 @@ def _message_content(msg: dict[str, Any]) -> str:
     return ""
 
 
+def _backoff_for(path_key: str) -> BackoffController:
+    if path_key not in _PATH_BACKOFF:
+        _PATH_BACKOFF[path_key] = BackoffController()
+    return _PATH_BACKOFF[path_key]
+
+
 def process_session_json_file(path: Path, config: SiphonConfig) -> bool:
     """
     If path is a new Hermes session JSON, extract and persist.
@@ -135,10 +143,31 @@ def process_session_json_file(path: Path, config: SiphonConfig) -> bool:
         LOG.warning("SIPHON daemon: ZAI_API_KEY not set; cannot extract %s", path)
         return False
 
-    try:
-        extraction = extract(transcript, config)
-    except Exception as e:
-        LOG.exception("SIPHON daemon: extract failed for %s: %s", path, e)
+    bc = _backoff_for(key)
+    extraction = None
+    for attempt in range(3):
+        try:
+            extraction = extract(transcript, config)
+            bc.reset()
+            break
+        except Exception as e:
+            append_siphon_error(
+                config.memory_dir,
+                {
+                    "kind": "daemon_extract_failed",
+                    "path": key,
+                    "attempt": attempt + 1,
+                    "error": repr(e),
+                },
+            )
+            LOG.exception("SIPHON daemon: extract failed for %s (attempt %s)", path, attempt + 1)
+            if attempt == 2:
+                return False
+            delay = bc.sleep_seconds_after_failure()
+            LOG.info("SIPHON daemon: backoff %.2fs before retry", delay)
+            time.sleep(delay)
+
+    if extraction is None:
         return False
 
     append_extraction(extraction, config.memory_path)

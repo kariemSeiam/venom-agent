@@ -32,6 +32,10 @@ class SiphonConfig:
         return self.memory_dir / ".siphon_index.json"
 
     @property
+    def siphon_errors_log_path(self) -> Path:
+        return self.memory_dir / ".siphon_errors.jsonl"
+
+    @property
     def has_api_key(self) -> bool:
         return bool(self.api_key)
 

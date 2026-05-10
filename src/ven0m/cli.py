@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
 from .core.config import VenomConfig
-from .mantle import Mantle
+from .mantle import Mantle, Wallet
 
 
 def _cmd_status() -> None:
@@ -46,6 +48,57 @@ def _cmd_mantle_inject(mantle: Mantle) -> None:
     print(prompt if prompt else "(empty system prompt — missing or unreadable identity files)")
 
 
+def _cmd_mantle_status(mantle: Mantle) -> None:
+    wallet = Wallet.load()
+    pact = mantle.load_pact()
+    voice = mantle.load_voice()
+    print("=== Mantle Identity Status ===")
+    print(f"  pact_loaded: {bool(pact)}")
+    print(f"  voice_loaded: {bool(voice)}")
+    print(f"  wallet_path: {wallet.path}")
+    print(f"  sessions_recorded: {wallet.session_count}")
+    print(f"  corrections_count: {len(wallet.corrections)}")
+    print(f"  active_pact_version: {wallet.active.get('pact_version')}")
+    print(f"  active_voice_version: {wallet.active.get('voice_version')}")
+    cond = wallet.get_conditioning()
+    print(f"  conditioning_keys: {list(cond.keys()) if cond else '(none)'}")
+    # Last 3 corrections
+    recent = wallet.corrections[-3:]
+    if recent:
+        print("  recent_corrections:")
+        for c in recent:
+            ts = datetime.fromtimestamp(c["ts"], tz=timezone.utc).isoformat()
+            print(f"    [{ts}] {c['field']}: {c['old_value']!r} → {c['new_value']!r} ({c.get('reason', '')})")
+
+
+def _cmd_mantle_history() -> None:
+    wallet = Wallet.load()
+    sessions = wallet.sessions[-20:]
+    if not sessions:
+        print("(no sessions recorded)")
+        return
+    print(f"=== Last {len(sessions)} Session(s) ===")
+    for s in sessions:
+        ts = datetime.fromtimestamp(s["ts"], tz=timezone.utc).isoformat()
+        print(f"  {ts}  model={s.get('model', '?')}  pact={s.get('pact_version')}  voice={s.get('voice_version')}")
+
+
+def _cmd_mantle_correct(field: str, value: str, reason: str, wallet_path: Path | None = None) -> None:
+    wallet = Wallet.load(wallet_path)
+    wallet.apply_correction(field, "", value, reason)
+    wallet.save()
+    print(f"Correction recorded: {field}={value!r} reason={reason!r}")
+
+
+def _cmd_mantle_export(mantle: Mantle) -> None:
+    wallet = Wallet.load()
+    outer, inner = mantle.get_system_prompt_dual(wallet)
+    export = wallet.export_identity()
+    export["outer_prompt_length"] = len(outer)
+    export["inner_prompt_length"] = len(inner)
+    print(json.dumps(export, indent=2, default=str))
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="ven0m",
@@ -62,6 +115,18 @@ def main(argv: list[str] | None = None) -> None:
     p_show.set_defaults(handler="mantle_show")
     p_inject = mantle_sub.add_parser("inject", help="Print combined system prompt for LLM injection")
     p_inject.set_defaults(handler="mantle_inject")
+    p_mantle_status = mantle_sub.add_parser("status", help="Show identity state, session count, last corrections")
+    p_mantle_status.set_defaults(handler="mantle_status")
+    p_mantle_history = mantle_sub.add_parser("history", help="Show last 20 sessions from wallet")
+    p_mantle_history.set_defaults(handler="mantle_history")
+    p_mantle_correct = mantle_sub.add_parser("correct", help="Apply a correction to identity field")
+    p_mantle_correct.add_argument("field", help="Identity field to correct")
+    p_mantle_correct.add_argument("value", help="New value")
+    p_mantle_correct.add_argument("--reason", "-r", default="", help="Reason for correction")
+    p_mantle_correct.add_argument("--wallet", type=Path, default=None, help="Path to wallet.json")
+    p_mantle_correct.set_defaults(handler="mantle_correct")
+    p_mantle_export = mantle_sub.add_parser("export", help="Dump full identity to stdout as JSON")
+    p_mantle_export.set_defaults(handler="mantle_export")
 
     p_siphon = sub.add_parser("siphon", help="Session death and rebirth")
     siphon_sub = p_siphon.add_subparsers(dest="siphon_cmd", required=True)
@@ -112,6 +177,14 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_mantle_show(mantle)
     elif args.handler == "mantle_inject":
         _cmd_mantle_inject(mantle)
+    elif args.handler == "mantle_status":
+        _cmd_mantle_status(mantle)
+    elif args.handler == "mantle_history":
+        _cmd_mantle_history()
+    elif args.handler == "mantle_correct":
+        _cmd_mantle_correct(args.field, args.value, args.reason, args.wallet)
+    elif args.handler == "mantle_export":
+        _cmd_mantle_export(mantle)
     elif args.handler == "siphon_extract":
         from .siphon.cli import main as siphon_main
 

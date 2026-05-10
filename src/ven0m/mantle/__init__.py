@@ -3,5 +3,6 @@
 from __future__ import annotations
 
 from .loader import Mantle
+from .wallet import Wallet
 
-__all__ = ["Mantle"]
+__all__ = ["Mantle", "Wallet"]

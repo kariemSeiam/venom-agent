@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import json
+import time
 from dataclasses import replace
 from pathlib import Path
 
+import httpx
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from ven0m.core.config import SiphonConfig, VenomConfig
+from ven0m.siphon.backoff import BackoffController
 from ven0m.siphon.daemon import (
     ensure_memory_and_watch_dirs,
     process_session_json_file,
@@ -18,9 +23,13 @@ from ven0m.siphon.extractor import (
     Extraction,
     append_corrections,
     append_extraction,
+    append_siphon_error,
     build_rebirth_prompt,
+    extract,
     read_memory,
 )
+
+from ven0m.siphon.schema import ExtractionResult, ExtractionSeverity
 
 
 # ── Fixtures ───────────────────────────────────────────────────────────
@@ -309,3 +318,220 @@ class TestConfig:
         monkeypatch.delenv("ZAI_API_KEY", raising=False)
         config = SiphonConfig()
         assert not config.has_api_key
+
+
+# ── Pydantic schema ────────────────────────────────────────────────────────
+
+
+class TestPydanticExtractionSchema:
+    def test_valid_extraction_result(self):
+        data = {
+            "session_id": "s-1",
+            "extracted_at": "2026-05-11T12:00:00",
+            "entries": [
+                {
+                    "timestamp": "2026-05-11T12:00:00",
+                    "summary": "Worked",
+                    "decision": "Pick A",
+                    "correction": "",
+                    "pattern": "",
+                    "memory_worthy": True,
+                    "severity": "info",
+                }
+            ],
+            "total_tokens": 10,
+            "model_used": "glm",
+        }
+        r = ExtractionResult.model_validate(data)
+        assert r.session_id == "s-1"
+        assert r.entries[0].severity == ExtractionSeverity.info
+
+    def test_invalid_severity_rejected(self):
+        data = {
+            "session_id": "s-1",
+            "entries": [
+                {
+                    "timestamp": "t",
+                    "summary": "x",
+                    "severity": "not-a-level",
+                }
+            ],
+        }
+        with pytest.raises(ValidationError):
+            ExtractionResult.model_validate(data)
+
+
+class TestBackoffController:
+    def test_sleep_seconds_after_failure_scales(self, monkeypatch):
+        monkeypatch.setattr("random.uniform", lambda lo, hi: (lo + hi) / 2)
+        bc = BackoffController(base_interval=5.0, max_interval=120.0, jitter_fraction=0.2)
+        assert bc.sleep_seconds_after_failure() == pytest.approx(5.0)
+        assert bc.sleep_seconds_after_failure() == pytest.approx(10.0)
+        assert bc.sleep_seconds_after_failure() == pytest.approx(20.0)
+
+    def test_reset_restores_base(self, monkeypatch):
+        monkeypatch.setattr("random.uniform", lambda lo, hi: (lo + hi) / 2)
+        bc = BackoffController()
+        bc.sleep_seconds_after_failure()
+        bc.reset()
+        assert bc.sleep_seconds_after_failure() == pytest.approx(5.0)
+
+
+class TestExtractHardening:
+    def test_extract_uses_json_schema_path(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(time, "sleep", lambda _: None)
+        cfg = replace(SiphonConfig(), memory_dir=tmp_path, api_key="key")
+
+        payload = {
+            "session_id": "json-session",
+            "extracted_at": "2026-05-11T00:00:00",
+            "entries": [
+                {
+                    "timestamp": "2026-05-11T00:00:00",
+                    "summary": "Built tests",
+                    "decision": "Use pydantic",
+                    "correction": "",
+                    "pattern": "",
+                    "memory_worthy": True,
+                    "severity": "minor",
+                }
+            ],
+            "total_tokens": 0,
+            "model_used": "",
+        }
+
+        class OkResp:
+            status_code = 200
+            request = None
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    "choices": [{"message": {"content": json.dumps(payload)}}],
+                    "usage": {"total_tokens": 42},
+                }
+
+        monkeypatch.setattr("ven0m.siphon.extractor.httpx.post", lambda *a, **k: OkResp())
+
+        ex = extract("transcript body", cfg)
+        assert ex.session_id == "json-session"
+        assert "Use pydantic" in ex.decisions
+        assert ex.energy_state == "building"
+
+    def test_extract_legacy_yaml_fallback(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(time, "sleep", lambda _: None)
+        cfg = replace(SiphonConfig(), memory_dir=tmp_path, api_key="key")
+        yaml_body = (
+            "session:\n"
+            "  id: legacy-s\n"
+            "  date: 2026-02-02\n"
+            "  decisions: ['Legacy decision']\n"
+            "  corrections: []\n"
+            "  next_action: ''\n"
+            "  current_truth: 'Still works'\n"
+            "  blocks: []\n"
+            "  artifacts: []\n"
+            "  energy_state: idle\n"
+        )
+
+        class OkResp:
+            status_code = 200
+            request = None
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"choices": [{"message": {"content": yaml_body}}], "usage": {}}
+
+        monkeypatch.setattr("ven0m.siphon.extractor.httpx.post", lambda *a, **k: OkResp())
+
+        ex = extract("tr", cfg)
+        assert ex.session_id == "legacy-s"
+        assert ex.current_truth == "Still works"
+
+    def test_extract_retries_http_on_503(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(time, "sleep", lambda _: None)
+        cfg = replace(SiphonConfig(), memory_dir=tmp_path, api_key="key")
+        req = httpx.Request("POST", "https://api.example/v1")
+
+        calls = {"n": 0}
+        payload = {
+            "session_id": "retry-ok",
+            "extracted_at": "2026-05-11T00:00:00",
+            "entries": [
+                {
+                    "timestamp": "2026-05-11T00:00:00",
+                    "summary": "ok",
+                    "severity": "info",
+                }
+            ],
+        }
+
+        class OkResp:
+            status_code = 200
+            request = req
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"choices": [{"message": {"content": json.dumps(payload)}}], "usage": {}}
+
+        def fake_post(*a, **k):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return httpx.Response(503, request=req)
+            return OkResp()
+
+        monkeypatch.setattr("ven0m.siphon.extractor.httpx.post", fake_post)
+
+        ex = extract("t", cfg)
+        assert ex.session_id == "retry-ok"
+        assert calls["n"] == 2
+        assert (tmp_path / ".siphon_errors.jsonl").exists()
+
+    def test_extract_http_exhausted_writes_errors(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(time, "sleep", lambda _: None)
+        cfg = replace(SiphonConfig(), memory_dir=tmp_path, api_key="key")
+        req = httpx.Request("POST", "https://api.example/v1")
+
+        monkeypatch.setattr(
+            "ven0m.siphon.extractor.httpx.post",
+            lambda *a, **k: httpx.Response(503, request=req),
+        )
+
+        with pytest.raises(ValueError, match="HTTP extraction failed"):
+            extract("t", cfg)
+
+        lines = (tmp_path / ".siphon_errors.jsonl").read_text(encoding="utf-8").strip().splitlines()
+        assert len(lines) >= 3
+
+    def test_memory_append_separator_format(self, tmp_path):
+        mem = tmp_path / "MEMORY.md"
+        mem.parent.mkdir(parents=True, exist_ok=True)
+        ex = Extraction(
+            session_id="fmt",
+            date="2026-05-11",
+            decisions=["d"],
+            corrections=[],
+            next_action="",
+            current_truth="truth",
+            blocks=[],
+            artifacts=[],
+            energy_state="idle",
+        )
+        append_extraction(ex, mem)
+        text = mem.read_text(encoding="utf-8")
+        assert text.startswith("\n---\n")
+        assert "session:" in text
+        assert "id: fmt" in text
+
+
+class TestSiphonErrorLog:
+    def test_append_siphon_error_jsonl(self, tmp_path):
+        append_siphon_error(tmp_path, {"kind": "unit", "ok": True})
+        line = (tmp_path / ".siphon_errors.jsonl").read_text(encoding="utf-8").strip()
+        assert json.loads(line)["kind"] == "unit"

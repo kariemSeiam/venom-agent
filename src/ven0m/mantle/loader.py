@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from ..core.config import MantleConfig
+from .wallet import Wallet
 
 logger = logging.getLogger(__name__)
 
@@ -115,3 +116,71 @@ class Mantle:
         if voice:
             parts.append("# VOICE\n\n" + voice)
         return "\n\n---\n\n".join(parts).strip()
+
+    # ── dual-stream prompting ────────────────────────────────────
+
+    def get_system_prompt_dual(self, wallet: Wallet | None = None) -> tuple[str, str]:
+        """Return (outer_prompt, inner_prompt) tuple.
+
+        * outer — personality the user sees (pact + voice from YAML)
+        * inner — reasoning context fed by wallet (history, corrections, conditioning)
+        """
+        pact = self.load_pact()
+        voice = self.load_voice()
+        outer = _compose_outer(pact, voice)
+        w = wallet if wallet is not None else Wallet.load()
+        inner = _compose_inner(w)
+        return outer, inner
+
+
+def _compose_outer(pact: str, voice: str) -> str:
+    """Build the outer prompt: personality the user sees."""
+    parts: list[str] = []
+    if pact:
+        parts.append("# PACT\n\n" + pact)
+    if voice:
+        parts.append("# VOICE\n\n" + voice)
+    return "\n\n---\n\n".join(parts).strip()
+
+
+def _compose_inner(wallet: Wallet) -> str:
+    """Build the inner prompt: reasoning context from wallet data."""
+    sections: list[str] = []
+
+    # Session summary
+    count = wallet.session_count
+    if count:
+        sections.append(f"## Session History\n{count} session(s) recorded.")
+        last = wallet.sessions[-1] if wallet.sessions else None
+        if last:
+            sections.append(f"Last session: model={last.get('model', '?')}")
+
+    # Active versions
+    active = wallet.active
+    pv = active.get("pact_version")
+    vv = active.get("voice_version")
+    if pv or vv:
+        lines = []
+        if pv:
+            lines.append(f"pact_version: {pv}")
+        if vv:
+            lines.append(f"voice_version: {vv}")
+        sections.append("## Active Identity Versions\n" + "\n".join(lines))
+
+    # Active corrections
+    corrections = wallet.corrections
+    if corrections:
+        lines = []
+        for c in corrections[-10:]:
+            lines.append(f"- [{c.get('field', '?')}] {c.get('old_value', '')} → {c.get('new_value', '')}")
+        sections.append("## User Corrections\n" + "\n".join(lines))
+
+    # Conditioning
+    conditioning = wallet.get_conditioning()
+    if conditioning:
+        lines = [f"- {k}: {v}" for k, v in conditioning.items()]
+        sections.append("## Conditioning\n" + "\n".join(lines))
+
+    if not sections:
+        return ""
+    return "# IDENTITY CONTEXT (internal)\n\n" + "\n\n".join(sections)
