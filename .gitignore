@@ -1,3 +1,12 @@
-COMPARE/openclaw/openclaw-main/extensions/diffs/assets/viewer-runtime.js
-COMPARE/openclaw/openclaw-main/apps/ios/screenshots/session-2026-03-07/canvas-cool.png
-COMPARE/pi/pi-main/packages/coding-agent/test/fixtures/before-compaction.jsonl
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+.ruff_cache/
+.env
+*.so
