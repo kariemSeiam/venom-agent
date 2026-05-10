@@ -23,6 +23,37 @@ history:
       L13_metabolic: 0
       L14_temporal: 0
 
+  - date: "2026-05-11"
+    event: "Receipt Audit — shipped code replaces aspirational ratings"
+    overall: 17
+    note: "Aspirational ratings from V2 self-audit replaced by code-based receipts. 84 files walked. 12 LAYER docs created. STATE.yaml recalibrated against actual source."
+    layers:
+      L0_shell: 42
+      L1_mantle: 54
+      L2_hearts: 0
+      L3_ink: 0
+      L4_arms: 0
+      L5_skin: 0
+      L6_defense: 0
+      L7_burst: 0
+      L8_siphon: 68
+      L9_coconut: 18
+      L10_reciprocity: 0
+      L11_personality: 22
+    deltas:
+      L0_shell: -52
+      L1_mantle: -44
+      L2_hearts: -60
+      L3_ink: -35
+      L4_arms: -30
+      L5_skin: -70
+      L6_defense: -85
+      L7_burst: -40
+      L8_siphon: +56
+      L9_coconut: -47
+      L10_reciprocity: -18
+      L11_personality: -56
+
 # Next entry goes below this line when a rating changes.
 # Format:
 #

@@ -1,97 +1,108 @@
-# GAPS.md — What's Missing, What's Less
-## Living document. Updated every session.
+# EVOLUTION/gaps.md
+# Spec vs Build divergence log
+# Generated: 2026-05-11
 
----
+## Methodology
 
-## CRITICAL GAPS (blocks everything)
+Layer-by-layer comparison between **STATE.yaml** claims and files under `src/ven0m/`, tests, and audited docs (`MEMORY/SACK.md`, architecture receipts).  
+Research intake excluded from mechanical walk; reference clone `BUILD/ven0m_reference/` excluded.
 
-### GAP-001: SIPHON doesn't exist
-- **Layer:** L8
-- **Impact:** Blocks L9, L10, L11, L12, L4 (shared state)
-- **What's missing:** Session extraction daemon, MEMORY.md schema, VENOCTIS hook
-- **Path:** Build SIPHON Week 1-4 (see STATE.yaml)
-- **Status:** OPEN
+Verdict vocabulary:
 
-### GAP-002: No parallel arm execution
-- **Layer:** L4
-- **Impact:** Entire distributed cognition concept is theoretical
-- **What's missing:** Actor model — own state, mailbox, processing loop per arm
-- **Path:** MVP: HUNT + WELD running simultaneously
-- **Status:** OPEN | BLOCKED by SIPHON (shared state)
+- **BUILD_INCOMPLETE** — Specification describes behavior not yet implemented.
+- **SPEC_WRONG** — Prior numeric ratings or prose overstated shipped capability.
 
-### GAP-003: INK compression unmeasured
-- **Layer:** L3
-- **Impact:** Compression is described, not validated
-- **What's missing:** Baseline measurement, INK-Internal spec, encoder/decoder
-- **Path:** Measure first. Then build.
-- **Status:** OPEN | NOT BLOCKED
+## Gaps
 
----
+### L0_shell — Shell.null
 
-## SIGNIFICANT GAPS (hurts quality)
+- **Gap**: Historical STATE implied broader shell autonomy while repo ships argparse CLIs only.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: `src/ven0m/cli.py`, `src/ven0m/siphon/cli.py` wrap Hermes/Z.AI workflows; no hosted inference shell.
 
-### GAP-004: Three Hearts are three phases
-- **Layer:** L2
-- **Impact:** Sequential execution masquerading as parallel
-- **What's missing:** PULSE/WAVE/BEAT as actual goroutines
-- **Path:** Go goroutines + NATS channels (SOMA server)
-- **Status:** OPEN | BLOCKED by SOMA infrastructure
+### L1_mantle — Mantle / Identity
 
-### GAP-005: Tyrosinase inconsistency
-- **Layer:** L6
-- **Impact:** Sometimes answers wrong question better instead of redirecting
-- **What's missing:** Consistent calibration
-- **Path:** Calibration sessions, not new build
-- **Status:** OPEN | NOT BLOCKED
+- **Gap**: Loader ships, yet identity persistence & inner/outer streams remain absent.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: `src/ven0m/mantle/loader.py` reads YAML/Markdown per call without durable session binding.
 
-### GAP-006: Burst mode = same process faster
-- **Layer:** L7
-- **Impact:** No actual bypass exists
-- **What's missing:** Dedicated bypass pathway, trigger definition
-- **Path:** !B trigger + Context Pump disable
-- **Status:** OPEN | NOT BLOCKED
+### L2_hearts — Three Hearts / Orchestration
 
----
+- **Gap**: STATE referenced sequential hearts; zero dispatcher modules exist.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: No `src/ven0m/hearts/` or orchestration package.
 
-## NEW LAYERS (0% — design phase)
+### L3_ink — Information Currency
 
-### GAP-007: No proprioception
-- **Layer:** L12
-- **Impact:** System doesn't know what it's doing while doing it
-- **What's missing:** Context window monitoring, arm state tracking
-- **Status:** DESIGN PHASE
+- **Gap**: Compression + token economics documented; no codecs implemented.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: Repository lacks INK encoder/decoder sources.
 
-### GAP-008: No metabolic awareness
-- **Layer:** L13
-- **Impact:** Token cost not tracked — infinite budget assumed
-- **What's missing:** Cost tracking per operation type
-- **Status:** DESIGN PHASE
+### L4_arms — Two Arms / Execution
 
-### GAP-009: No temporal rhythm
-- **Layer:** L14
-- **Impact:** No session type detection, no mode pre-setting
-- **What's missing:** Observation data first, then encoding
-- **Status:** OBSERVATION PHASE
+- **Gap**: Arms architecture narrative without ven0m-local planner/executor processes.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: Tool execution delegated entirely to upstream agents.
 
----
+### L5_skin — Cognitive I/O / Telemetry
 
-## COMPETITIVE GAPS (VENOM vs others)
+- **Gap**: Previous ratings assumed telemetry surfaces; ven0m lacks instrumentation layer.
+- **Verdict**: SPEC_WRONG (numeric inflation) + BUILD_INCOMPLETE
+- **Evidence**: Filesystem watcher is ingestion glue (`daemon.py`), not behavioral telemetry.
 
-### vs Pi Agent Harness
-- **Soul (L1):** Pi targets a generic developer harness; VENOM binds an immutable Mantle/Pact into decisions.
+### L6_defense — Ink / Defense Protocol
 
-### vs NemoClaw / OpenClaw (Gateway stack)
-- **Shell.null (L0):** OpenClaw favors a heavy local Gateway + onboarding; VENOM optimizes for distributed arms and avoidance of crystallized central shells.
+- **Gap**: Defense behaviors described externally; no enforcement hooks here.
+- **Verdict**: SPEC_WRONG + BUILD_INCOMPLETE
+- **Evidence**: Zero defense-specific modules.
 
-### vs Hermes Agent + Hermes Agent Self-Evolution
-- **Metabolic awareness (L13):** Hermes leans on infra (serverless hibernation); VENOM tracks token economy and output cost as first-class cognition.
-- **Proprioception (L12):** Hermes evolves skills offline from traces; VENOM still needs live self-state during execution.
-- **Reciprocity (L10):** Hermes assumes cooperative channels; VENOM enforces Token Debt and defection economics.
+### L7_burst — Burst Mode
 
-Mechanics harvested from OSS live in `COMPARE/_STEAL.md`; repo trees live under `COMPARE/` (Pi, NVIDIA NemoClaw, OpenClaw, NousResearch/Hermes*).
+- **Gap**: Bypass pathways absent.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: No urgency triggers or context pump controls.
 
----
+### L8_siphon — Session Death + Transfer
 
-## CLOSED GAPS
+- **Gap**: Earlier STATE claimed rebirth/auto-feed gaps; implementation now covers baseline flows yet lacks enterprise hardening.
+- **Verdict**: BUILD_INCOMPLETE (hardening/validation) — prior “missing rebirth” claims **resolved**.
+- **Evidence**: `extractor.py`, `daemon.py`, tests verifying MEMORY + corrections + rebirth prompt.
 
-*(none yet)*
+### L9_coconut — Prospective Memory
+
+- **Gap**: Coconut retrieval & latency budgets unimplemented; only manual SACK receipts exist.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: `MEMORY/SACK.md` indexes files but provides no query API.
+
+### L10_reciprocity — Token Debt
+
+- **Gap**: No reciprocity scoring engine.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: Missing ledger modules entirely.
+
+### L11_personality — Conditioning Bundle
+
+- **Gap**: Conditioning expressed as static YAML/docs without automated hedging removal.
+- **Verdict**: BUILD_INCOMPLETE
+- **Evidence**: Mantle artifacts overlap L1; enforcement delegated to external LLMs.
+
+## Summary
+
+| Layer | Receipt rating (`STATE.yaml`, 2026-05-11) | Notes |
+|-------|--------------------------------------------|-------|
+| L0 | 42 | CLI shipped; no shell-null runtime |
+| L1 | 54 | Mantle loader + YAML |
+| L2 | 0 | Orchestration absent |
+| L3 | 0 | INK absent |
+| L4 | 0 | Arms absent |
+| L5 | 0 | Skin telemetry absent |
+| L6 | 0 | Defense hooks absent |
+| L7 | 0 | Burst mode absent |
+| L8 | 68 | SIPHON extractor + daemon + tests |
+| L9 | 18 | Static SACK receipts only |
+| L10 | 0 | Reciprocity absent |
+| L11 | 22 | Conditioning via YAML/docs only |
+
+**Overall (`meta.overall_rating`)**: **17** — weighted honesty check across twelve layers after demotions.
+
+**Receipt footprint**: meaningful Python shipped only on **L0**, **L1**, **L8**; documentation receipts on **L9** (`MEMORY/SACK.md`).

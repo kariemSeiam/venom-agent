@@ -10,3 +10,4 @@ build/
 .ruff_cache/
 .env
 *.so
+BUILD/ven0m_reference/

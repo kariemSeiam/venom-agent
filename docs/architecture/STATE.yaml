@@ -1,15 +1,15 @@
 # VENOM∞ — Master State
 # Single source of truth. Update after every session.
-# Last updated: 2026-05-10
+# Last updated: 2026-05-11
 
 meta:
   version: "2.2"
-  overall_rating: 31
+  overall_rating: 17
   active_phase: 0
   current_blocker: null
   session_count: 8
   last_session: "session-010"
-  next_session_priority: "Run siphon.ts locally for the next 20 sessions before expanding architecture."
+  next_session_priority: "Harden SIPHON daemon reliability + schema validation; grow L9 retrieval beyond static SACK receipts."
 
 principles:
   P1: DISTRIBUTION_OVER_CENTRALIZATION
@@ -23,156 +23,155 @@ principles:
 layers:
   L0_shell:
     name: "Shell.null"
-    rating: 35
-    gap: 65
+    rating: 42
+    gap: 58
     status: PARTIAL
     blocker: null
     missing:
-      - "Still inside provider containers (Claude, Gemini)"
-      - "True shell.null = owning the full pipeline"
-    path_to_100: "TypeScript CLI + local LLM"
+      - "Still inside provider containers (Claude, Gemini, Hermes hosts)"
+      - "True shell.null = owning the full inference + tool pipeline inside ven0m"
+    path_to_100: "Owned runtime loop + provider adapters beyond argparse glue"
     depends_on: []
 
   L1_mantle:
     name: "Mantle / Identity"
-    rating: 55
-    gap: 45
+    rating: 54
+    gap: 46
     status: PARTIAL
     blocker: null
     missing:
-      - "Identity does not survive session restart"
+      - "Identity does not survive session restart inside ven0m"
       - "Inner reasoning not separated from outer response"
-    path_to_100: "Implementation detail — inner/outer stream separation"
+    path_to_100: "Persistent mantle store + dual-stream prompting"
     depends_on: []
 
   L2_hearts:
     name: "Three Hearts / Orchestration"
-    rating: 20
-    gap: 80
-    status: CRITICAL
+    rating: 0
+    gap: 100
+    status: NOT_STARTED
     blocker: null
     missing:
-      - "Three phases sequentially is one heart with three beats"
-    path_to_100: "TypeScript sequential dispatcher"
+      - "No sequential dispatcher / hearts implementation in ven0m"
+    path_to_100: "Define hearts package + orchestration API when build starts"
     depends_on: []
 
   L3_ink:
     name: "INK / Information Currency"
-    rating: 15
-    gap: 85
-    status: CRITICAL
+    rating: 0
+    gap: 100
+    status: NOT_STARTED
     blocker: null
     missing:
-      - "Compression ratio unmeasured"
-      - "Encoder/decoder undefined"
-    path_to_100: "Measure baseline → spec INK-Internal → encoder/decoder in TS → deploy"
+      - "Compression CODEC + ledger absent"
+    path_to_100: "Baseline compression harness → encoder/decoder modules"
     measurement_target: "3.4x compression on internal comms"
     depends_on: []
 
   L4_arms:
     name: "Two Arms / Local Execution"
-    rating: 10
-    gap: 90
-    status: CRITICAL
+    rating: 0
+    gap: 100
+    status: NOT_STARTED
     blocker: null
     missing:
-      - "Eight arms running in one thread is one arm wearing eight hats"
-    path_to_100: "Two arms (Planner + Executor) via in-memory TS channels"
+      - "Planner + executor nodes not implemented locally"
+    path_to_100: "Introduce arms package + channel fabric"
     mvp: "HUNT + WELD running simultaneously (2-arm parallel test)"
     depends_on: [SIPHON]
 
   L5_skin:
     name: "Skin System / Cognitive I/O"
-    rating: 45
-    gap: 55
-    status: PARTIAL
+    rating: 0
+    gap: 100
+    status: NOT_STARTED
     blocker: null
     missing:
-      - "No telemetry, no behavioral pattern detection, no temporal awareness"
-    path_to_100: "Flat file telemetry → I/O layer integration"
+      - "No telemetry bus, behavioral clustering, or temporal models"
+    path_to_100: "Structured telemetry emitter + ingestion pipeline"
     depends_on: [SIPHON]
 
   L6_defense:
     name: "Ink / Defense Protocol"
-    rating: 65
-    gap: 35
-    status: PARTIAL
+    rating: 0
+    gap: 100
+    status: NOT_STARTED
     blocker: null
     missing:
-      - "Tyrosinase deployed inconsistently"
-      - "Over-inking: stops conversation instead of redirecting"
-    path_to_100: "Calibration + consistency — not new build"
+      - "No tyrosinase/defense hooks shipped in ven0m"
+    path_to_100: "Defense module + policy surfaces"
     depends_on: []
 
   L7_burst:
     name: "Jet Propulsion / Burst Mode"
-    rating: 20
-    gap: 80
-    status: CRITICAL
+    rating: 0
+    gap: 100
+    status: NOT_STARTED
     blocker: null
     missing:
-      - "No bypass pathway, no !B trigger, no Context Pump disable"
-    path_to_100: "Trigger: !B keyword or 5× urgency signals → bypass Context Pump → raw Task only"
+      - "No bypass pathway, !B trigger, or Context Pump integration"
+    path_to_100: "Burst dispatcher tied to urgency signals"
     depends_on: []
 
   L8_siphon:
     name: "SIPHON / Session Death + Transfer"
-    rating: 40
-    gap: 60
+    rating: 68
+    gap: 32
     status: PARTIAL
     blocker: null
     missing:
-      - "No rebirth from prior session state"
-      - "No auto-population"
+      - "Production-grade backoff / schema validation / monitoring"
+      - "Hermes JSON parsing covers happy-path transcripts only"
     build_weeks:
-      week_1: "siphon.ts shipped (4 fields)"
-      week_2: "Run for 20 sessions manually"
-      week_3: "Rebirth prompt (load MEMORY.md tail)"
+      week_1: "Python extractor + MEMORY.md + corrections.yaml"
+      week_2: "Daemon watch + `.siphon_index.json` dedupe"
+      week_3: "Integration testing across Hermes dump formats"
     depends_on: []
     blocks: [L9, L10, L11, L4]
 
   L9_coconut:
     name: "Coconut Shells / Prospective Memory"
-    rating: 30
-    gap: 70
-    status: CRITICAL
+    rating: 18
+    gap: 82
+    status: PARTIAL
     blocker: null
     missing:
-      - "No retrieval, no <100ms scan, no portability metadata enforcement"
-    path_to_100: "SACK.md designed after SIPHON schema complete"
+      - "No programmatic retrieval or <100ms scan"
+      - "Portability metadata enforcement absent"
+    path_to_100: "Indexer service atop MEMORY artifacts + coconut schema"
     retrieval_target: "<100ms"
     depends_on: [SIPHON]
 
   L10_reciprocity:
     name: "Reciprocity Enforcement"
-    rating: 8
-    gap: 92
-    status: CRITICAL
+    rating: 0
+    gap: 100
+    status: NOT_STARTED
     blocker: null
     missing:
-      - "No Token Debt code, no handshake protocol, no score persistence"
-    path_to_100: "Token Debt Score per input source — tracks cooperation/defection"
+      - "No Token Debt code, handshake protocol, or persistence"
+    path_to_100: "Ledger module + scoring hooks"
     depends_on: [SIPHON]
 
   L11_personality:
     name: "Portable Conditioning Bundle"
-    rating: 40
-    gap: 60
+    rating: 22
+    gap: 78
     status: PARTIAL
     blocker: null
     missing:
-      - "Personality re-instantiated from prompts, not grown"
-    path_to_100: "Accumulated sessions via SIPHON + remove all hedging"
+      - "Conditioning is prompt/static YAML only — no automated hedging removal"
+    path_to_100: "Validators + SIPHON-fed conditioning history"
     depends_on: [SIPHON]
 
 technology_stack:
   locked: true
-  orchestration: "TypeScript / Bun"
-  messaging: "In-process pub/sub"
-  arm_intelligence: "TypeScript / Bun"
-  memory: "SQLite (bun:sqlite) + Flat files"
-  daemon: "None"
-  session_transfer: "siphon.ts (CLI)"
+  orchestration: "TypeScript / Bun (external); ven0m Python adjunct"
+  messaging: "In-process pub/sub (Hermes host)"
+  arm_intelligence: "Delegated to provider agents"
+  memory: "Flat files (MEMORY.md, corrections.yaml, SACK receipts)"
+  daemon: "watchdog polling via ven0m.siphon.daemon"
+  session_transfer: "ven0m Python SIPHON CLI + daemon → MEMORY artifacts"
 
 arms:
   architecture: "2 nodes: Planner + Executor."
@@ -231,3 +230,8 @@ evolution_log:
     rating_before: 42
     rating_after: 31
     notes: "Accepted brutal layer-by-layer cuts. L0 to 35, L1 to 55, L4 to 10. Renamed hesitant arms: HUNT->DIG, CALL->SYNC, DART->TRACE."
+  - date: "2026-05-11"
+    event: "Receipt Audit — shipped code replaces aspirational ratings"
+    rating_before: 31
+    rating_after: 17
+    notes: "45 tracked files walked (43 md/py/yaml + pyproject + .gitignore; excludes BUILD mirror + docs/research/intake + caches). 3 layers hold Python receipts (L0,L1,L8); L9 gains documentation-only coconut index; 7 layers demoted to rating 0; STATE.yaml + MEMORY/SACK.md + docs/architecture/LAYERS synced to reality."
