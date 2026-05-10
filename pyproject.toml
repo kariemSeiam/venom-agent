@@ -26,6 +26,7 @@ dev = [
 
 [project.scripts]
 siphon = "ven0m.siphon.cli:main"
+ven0m = "ven0m.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

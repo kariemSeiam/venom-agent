@@ -1,83 +1,84 @@
 # ven0m
 
-> *The octopus shed its shell. Then it evolved its mind.*
+**ven0m** is the first shipping artifact from [unshelled.ai](https://unshelled.ai): a Python toolkit for the **VENOM** agent architecture — session death and rebirth (**SIPHON**), plus the **Mantle** identity layer (immutable **PACT** and communication **VOICE**) meant to be injected as system context for LLMs. It is code-first scaffolding for distributed cognition without a hard-coded persona shell.
 
-**unshelled.ai** — building the VENOM agent architecture.
+## Installation
 
-## What
+When published to PyPI:
 
-VENOM is a multi-layer AI agent architecture built on 8 prime principles. No framework. No shell. Pure distributed cognition modeled after octopus biology.
+```bash
+pip install ven0m
+```
 
-This repo is the living implementation. Not docs. Code.
-
-## Install
+For local development (editable install with test extras):
 
 ```bash
 pip install -e ".[dev]"
 ```
 
-## SIPHON — Session Death & Rebirth
+## Quick start
 
-The core of VENOM. Extracts knowledge at session death so the next session is born with memory.
+**SIPHON** — extract structured memory from a session transcript and append it to `MEMORY.md`, or build a **rebirth** prompt from recent sessions:
 
 ```bash
-# Extract from a session transcript
 siphon extract path/to/transcript.md
-
-# Build rebirth prompt from memory
 siphon rebirth
 
-# Dry run (print, don't write)
-siphon extract transcript.md --dry-run
+# Same via the root CLI:
+ven0m siphon extract path/to/transcript.md
+ven0m siphon rebirth
 ```
 
-### The 4 Fields
-
-```yaml
-session:
-  id: "session-NNN"
-  date: YYYY-MM-DD
-  decisions: []      # what changed
-  corrections: []    # what was wrong and got fixed
-  next_action: ""    # first thing to do next session
-  current_truth: ""  # one sentence the next session inherits
-```
-
-4 fields. Not 22. Not 729 lines. Run for 20 sessions before expanding.
-
-## Test
+**Mantle** — inspect identity files shipped under `ven0m/mantle/` (`pact.yaml`, `voice.yaml`) or emit a combined system prompt for piping into your stack:
 
 ```bash
-pytest -v
+ven0m mantle show
+ven0m mantle inject
 ```
 
-## Project Structure
+**Status**:
+
+```bash
+ven0m status
+python -m ven0m.cli status
+```
+
+## Architecture overview
+
+VENOM is organized as **14 layers** (shell, mantle, hearts, ink, arms, skin, defense, burst, siphon, coconut, reciprocity, personality, and supporting meta) with explicit ratings and gaps tracked in the canonical state file:
+
+- [`docs/architecture/STATE.yaml`](docs/architecture/STATE.yaml)
+
+This package currently implements **SIPHON** (L8 — session transfer) and **Mantle** (L1 — identity contracts). Other layers are specified in docs and state; they are not all implemented here yet.
+
+## SOUL system (philosophy)
+
+The **PACT** is the immutable behavioral contract: truth over comfort, identity through depth rather than performed persona, clean session death with durable knowledge, and enforcement that makes cooperation real. The **VOICE** standard defines how outputs read: direct, non-performative, mode-aware (e.g. execution vs. reflection) without announcing intent. Canonical prose lives under `docs/soul/`; structured payloads for runtime loading live as YAML beside the Mantle loader.
+
+## Project structure
 
 ```
 src/ven0m/
-├── core/config.py      # Configuration (API, paths)
-├── siphon/
-│   ├── extractor.py    # Session extraction + memory I/O
-│   └── cli.py          # CLI entry point
-└── mantle/             # Identity + behavioral contracts (coming)
-docs/                   # Architecture reference, research, audits
-tests/                  # 18 tests, all green
+├── __init__.py
+├── cli.py                 # ven0m root CLI (status, mantle, siphon dispatch)
+├── core/
+│   └── config.py          # SiphonConfig, MantleConfig, VenomConfig
+├── mantle/
+│   ├── loader.py          # Mantle class — load PACT/VOICE, system prompt
+│   ├── pact.yaml          # Structured PACT
+│   └── voice.yaml         # Structured VOICE
+└── siphon/
+    ├── cli.py             # siphon entry point
+    └── extractor.py       # extraction + MEMORY.md I/O
+docs/
+├── architecture/STATE.yaml
+├── soul/                  # PACT.md, VOICE.md (reference prose)
+└── ...
+tests/
+├── test_siphon.py
+└── test_mantle.py
 ```
 
-## Principles
+## License
 
-```
-P1. Distribution over centralization
-P3. Identity through depth, not armor
-P4. Interface is the most expensive organ
-P5. Clean death enables real continuity
-P6. Prepare for futures visible from the present
-P7. Enforcement makes collaboration real
-P8. Personality is portable conditioning
-```
-
-## Company
-
-**unshelled.ai** — Kariem Seiam
-
-License: MIT
+MIT
