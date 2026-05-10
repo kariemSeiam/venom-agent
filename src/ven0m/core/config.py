@@ -15,7 +15,21 @@ class SiphonConfig:
     model: str = "glm-5-turbo"
     api_key: str = field(default_factory=lambda: os.environ.get("ZAI_API_KEY", ""))
     temperature: float = 0.1
-    memory_path: Path = field(default_factory=lambda: Path.cwd() / "MEMORY.md")
+    memory_dir: Path = field(default_factory=lambda: Path.cwd() / "MEMORY")
+    watch_dir: Path = field(default_factory=lambda: Path.home() / ".hermes" / "sessions")
+    poll_interval: float = 30.0
+
+    @property
+    def memory_path(self) -> Path:
+        return self.memory_dir / "MEMORY.md"
+
+    @property
+    def corrections_path(self) -> Path:
+        return self.memory_dir / "corrections.yaml"
+
+    @property
+    def siphon_index_path(self) -> Path:
+        return self.memory_dir / ".siphon_index.json"
 
     @property
     def has_api_key(self) -> bool:

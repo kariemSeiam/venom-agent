@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from . import __version__
@@ -23,6 +24,7 @@ def _cmd_status() -> None:
     print("SIPHON:")
     print(f"  model: {cfg.siphon.model}")
     print(f"  api_key_set: {cfg.siphon.has_api_key}")
+    print(f"  memory_dir: {cfg.siphon.memory_dir}")
     print(f"  memory_path: {cfg.siphon.memory_path}")
     print("Mantle:")
     print(f"  pact_path: {cfg.mantle.pact_path} (exists={pact_ok}, loaded_non_empty={pact_loaded})")
@@ -76,6 +78,30 @@ def main(argv: list[str] | None = None) -> None:
     p_rebirth.add_argument("--last", "-n", type=int, default=5, help="Number of sessions to include")
     p_rebirth.set_defaults(handler="siphon_rebirth")
 
+    p_watch = siphon_sub.add_parser(
+        "watch",
+        help="Watch Hermes session JSON files and auto-extract into MEMORY/",
+    )
+    p_watch.add_argument(
+        "--watch-dir",
+        type=Path,
+        default=None,
+        help="Directory to watch (default: ~/.hermes/sessions)",
+    )
+    p_watch.add_argument(
+        "--memory-dir",
+        type=Path,
+        default=None,
+        help="MEMORY folder containing MEMORY.md (default: ./MEMORY)",
+    )
+    p_watch.add_argument(
+        "--poll-interval",
+        type=float,
+        default=None,
+        help="Polling interval in seconds (default: 30)",
+    )
+    p_watch.set_defaults(handler="siphon_watch")
+
     args = parser.parse_args(argv)
 
     mantle = Mantle(VenomConfig().mantle)
@@ -105,6 +131,19 @@ def main(argv: list[str] | None = None) -> None:
             siphon_argv.extend(["--memory", str(args.memory)])
         siphon_argv.extend(["--last", str(args.last)])
         siphon_main(siphon_argv)
+    elif args.handler == "siphon_watch":
+        from .siphon.daemon import run_watch
+
+        base = VenomConfig().siphon
+        overrides = {}
+        if args.watch_dir is not None:
+            overrides["watch_dir"] = args.watch_dir.expanduser().resolve()
+        if args.memory_dir is not None:
+            overrides["memory_dir"] = args.memory_dir.expanduser().resolve()
+        if args.poll_interval is not None:
+            overrides["poll_interval"] = args.poll_interval
+        cfg = replace(base, **overrides) if overrides else base
+        run_watch(cfg)
     else:
         parser.error("unknown command")
 

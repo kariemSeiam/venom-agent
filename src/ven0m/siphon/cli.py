@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from ..core.config import SiphonConfig, VenomConfig
+from ..core.config import VenomConfig
 from .extractor import Extraction, append_extraction, build_rebirth_prompt, extract
 
 
@@ -57,6 +57,9 @@ def main(argv: list[str] | None = None) -> None:
                 corrections=extraction.corrections,
                 next_action=extraction.next_action,
                 current_truth=extraction.current_truth,
+                blocks=extraction.blocks,
+                artifacts=extraction.artifacts,
+                energy_state=extraction.energy_state,
             )
 
         yaml_output = extraction.to_yaml()
